@@ -1,0 +1,2288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>EasyTrack Pro - Multi-Profile Financial Ledger</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- jsPDF & AutoTable for Clean PDF Output -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Google Fonts: Inter, Plus Jakarta Sans, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #090d16;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-24 selection:bg-indigo-500 selection:text-white">
+
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 pt-5 space-y-6">
+
+    <!-- Top App Card & Profile Management Bar -->
+    <header class="bg-[#111726] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        
+        <!-- App Title and Active Profile Pill -->
+        <div class="flex items-center space-x-3.5">
+          <div id="profileAvatar" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white text-lg font-extrabold shadow-lg shadow-indigo-500/25 shrink-0">
+            P
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-xl font-extrabold font-display tracking-tight text-white">EasyTrack Pro</h1>
+              <span class="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">v4.0 Multi-Profile</span>
+            </div>
+            
+            <!-- Profile Switcher Dropdown Trigger -->
+            <div class="flex items-center gap-2 mt-1">
+              <span class="text-xs text-slate-400 font-medium">Profile:</span>
+              <button onclick="openProfileSwitchModal()" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-indigo-500 text-xs text-indigo-300 font-semibold transition group">
+                <span id="activeProfileName">Personal</span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-300 transition"></i>
+              </button>
+              <button onclick="openCreateProfileModal()" title="Create New Profile" class="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs transition">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Global Actions: Currency, Export PDF, JSON & Reset -->
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex items-center bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1 text-xs">
+            <span class="text-slate-400 mr-1.5 font-medium">Currency:</span>
+            <select id="currencySelector" onchange="changeCurrency(this.value)" class="bg-transparent text-white font-semibold outline-none cursor-pointer">
+              <option value="₹" class="bg-slate-900">₹ INR</option>
+              <option value="$" class="bg-slate-900">$ USD</option>
+              <option value="€" class="bg-slate-900">€ EUR</option>
+              <option value="£" class="bg-slate-900">£ GBP</option>
+              <option value="AED " class="bg-slate-900">AED</option>
+            </select>
+          </div>
+
+          <!-- Feature-Gated: PDF & JSON Tools Container -->
+          <div id="exportToolsWrapper" class="flex items-center gap-2">
+            <button onclick="openPDFTimelineModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition shadow-md shadow-indigo-600/20 active:scale-95">
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+              <span>Export PDF</span>
+            </button>
+
+            <button onclick="exportToJSON()" title="Export JSON Backup" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-semibold text-xs transition active:scale-95">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+              <span>Export</span>
+            </button>
+            
+            <label title="Merge & Import JSON" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition cursor-pointer active:scale-95">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Merge</span>
+              <input type="file" id="importInput" accept=".json" onchange="importAndMergeJSON(event)" class="hidden">
+            </label>
+          </div>
+
+          <!-- Reset Profile Data Button -->
+          <button onclick="requestResetCurrentProfile()" title="Reset All Data In Current Profile" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold text-xs transition active:scale-95">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span>Reset</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Threshold Alert Banner (Dynamic) -->
+    <div id="thresholdBanner" class="hidden"></div>
+
+    <!-- Savings & Bill Due Reminders Container -->
+    <div id="remindersContainer" class="space-y-2"></div>
+
+    <!-- Modular Section: 1-Click Quick Presets -->
+    <section id="sectionQuickPresets" class="bg-[#111726] border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl transition-all">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="zap" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">1-Click Quick Presets</h2>
+        </div>
+        <button onclick="openModal('presetModal')" class="text-xs text-amber-400 hover:text-amber-300 font-medium inline-flex items-center gap-1">
+          <i data-lucide="sliders-horizontal" class="w-3 h-3"></i>
+          <span>Customize</span>
+        </button>
+      </div>
+
+      <div id="quickPresetsList" class="flex gap-2.5 overflow-x-auto pb-1.5 custom-scroll">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- Primary Action Pillars -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <!-- Inflow -->
+      <button onclick="openIncomeModal()" class="flex flex-col p-4 rounded-2xl bg-gradient-to-br from-emerald-950/40 to-emerald-900/10 border border-emerald-500/20 hover:border-emerald-500/40 text-left transition group active:scale-[0.98]">
+        <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-2.5 group-hover:scale-110 transition">
+          <i data-lucide="arrow-down-left" class="w-5 h-5"></i>
+        </div>
+        <span class="text-[11px] font-bold tracking-wider uppercase text-emerald-400">Inflow</span>
+        <span class="text-sm font-extrabold text-white mt-0.5">+ Income</span>
+        <span class="text-[11px] text-slate-400 mt-1">Salary, profits</span>
+      </button>
+
+      <!-- Expense -->
+      <button onclick="openExpenseModal()" class="flex flex-col p-4 rounded-2xl bg-gradient-to-br from-rose-950/40 to-rose-900/10 border border-rose-500/20 hover:border-rose-500/40 text-left transition group active:scale-[0.98]">
+        <div class="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center mb-2.5 group-hover:scale-110 transition">
+          <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+        </div>
+        <span class="text-[11px] font-bold tracking-wider uppercase text-rose-400">Outflow</span>
+        <span class="text-sm font-extrabold text-white mt-0.5">- Expense</span>
+        <span class="text-[11px] text-slate-400 mt-1">Food, daily, fuel</span>
+      </button>
+
+      <!-- Utility Bills (Feature toggled) -->
+      <button id="btnPillarBill" onclick="openBillModal()" class="flex flex-col p-4 rounded-2xl bg-gradient-to-br from-blue-950/40 to-blue-900/10 border border-blue-500/20 hover:border-blue-500/40 text-left transition group active:scale-[0.98]">
+        <div class="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-2.5 group-hover:scale-110 transition">
+          <i data-lucide="receipt" class="w-5 h-5"></i>
+        </div>
+        <span class="text-[11px] font-bold tracking-wider uppercase text-blue-400">Utilities</span>
+        <span class="text-sm font-extrabold text-white mt-0.5">Bills & Dues</span>
+        <span class="text-[11px] text-slate-400 mt-1">Power, Wi-Fi, SIM</span>
+      </button>
+
+      <!-- Savings & Wealth (Feature toggled) -->
+      <button id="btnPillarSavings" onclick="openSavingsModal()" class="flex flex-col p-4 rounded-2xl bg-gradient-to-br from-violet-950/40 to-violet-900/10 border border-violet-500/20 hover:border-violet-500/40 text-left transition group active:scale-[0.98]">
+        <div class="w-8 h-8 rounded-xl bg-violet-500/20 text-violet-400 flex items-center justify-center mb-2.5 group-hover:scale-110 transition">
+          <i data-lucide="gem" class="w-5 h-5"></i>
+        </div>
+        <span class="text-[11px] font-bold tracking-wider uppercase text-violet-400">Wealth</span>
+        <span class="text-sm font-extrabold text-white mt-0.5">Save / Invest</span>
+        <span class="text-[11px] text-slate-400 mt-1">SIP, targets, gold</span>
+      </button>
+    </section>
+
+    <!-- Comprehensive Financial Breakdown (Today | Month | Year) -->
+    <section class="bg-[#111726] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200">Financial Summary</h2>
+          <p class="text-xs text-slate-400">Calculated strictly within the current daily, monthly & yearly cycles</p>
+        </div>
+        <button id="btnSetLimits" onclick="openModal('limitModal')" class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-slate-700 transition">
+          Set Spending Limits
+        </button>
+      </div>
+
+      <!-- Comparative Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs sm:text-sm">
+          <thead>
+            <tr class="text-slate-400 border-b border-slate-800">
+              <th class="py-2.5 font-medium">Metric</th>
+              <th class="py-2.5 font-semibold text-right text-emerald-400">Today</th>
+              <th class="py-2.5 font-semibold text-right text-indigo-400">This Month</th>
+              <th class="py-2.5 font-semibold text-right text-violet-400">This Year</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60 font-mono text-xs sm:text-sm">
+            <tr>
+              <td class="py-2.5 text-slate-300 font-sans flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Total Income
+              </td>
+              <td id="statTodayIncome" class="py-2.5 text-right font-medium text-emerald-400">0</td>
+              <td id="statMonthIncome" class="py-2.5 text-right font-medium text-emerald-400">0</td>
+              <td id="statYearIncome" class="py-2.5 text-right font-medium text-emerald-400">0</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 text-slate-300 font-sans flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-rose-400"></span> Total Expenses & Bills
+              </td>
+              <td id="statTodayExpense" class="py-2.5 text-right font-medium text-rose-400">0</td>
+              <td id="statMonthExpense" class="py-2.5 text-right font-medium text-rose-400">0</td>
+              <td id="statYearExpense" class="py-2.5 text-right font-medium text-rose-400">0</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 text-slate-300 font-sans flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-violet-400"></span> Savings & Wealth
+              </td>
+              <td id="statTodaySavings" class="py-2.5 text-right font-medium text-violet-400">0</td>
+              <td id="statMonthSavings" class="py-2.5 text-right font-medium text-violet-400">0</td>
+              <td id="statYearSavings" class="py-2.5 text-right font-medium text-violet-400">0</td>
+            </tr>
+            <tr class="bg-slate-900/40 font-bold">
+              <td class="py-3 text-white font-sans">Net Cash in Hand</td>
+              <td id="statTodayNet" class="py-3 text-right">0</td>
+              <td id="statMonthNet" class="py-3 text-right">0</td>
+              <td id="statYearNet" class="py-3 text-right">0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Feature-Gated: Spending Limits Gauges -->
+      <div id="sectionBudgetGauges" class="space-y-3 pt-2">
+        <div>
+          <div class="flex justify-between items-center text-xs mb-1">
+            <span class="text-slate-400 font-medium">Monthly Cycle Spending Usage:</span>
+            <span id="monthlyLimitStats" class="font-mono text-slate-300">0 / 0 (0%)</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="monthlyLimitBar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center text-xs mb-1">
+            <span class="text-slate-400 font-medium">Yearly Cycle Spending Usage:</span>
+            <span id="yearlyLimitStats" class="font-mono text-slate-300">0 / 0 (0%)</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="yearlyLimitBar" class="h-full bg-indigo-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modular Section: Utility Bills & Recharges Manager -->
+    <section id="sectionUtilityBills" class="bg-[#111726] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="min-w-0">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200">Utility Bills & Dues</h2>
+          <p class="text-xs text-slate-400 truncate">Keep track of variable or fixed recurring bills</p>
+        </div>
+        <button onclick="openBillModal()" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition whitespace-nowrap">
+          + Add Bill
+        </button>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div class="flex border-b border-slate-800 mb-4 gap-6 text-xs font-semibold">
+        <button id="billTabUnpaid" onclick="switchBillTab('unpaid')" class="pb-2 border-b-2 border-blue-500 text-blue-400">
+          Unpaid / Upcoming (<span id="unpaidCount">0</span>)
+        </button>
+        <button id="billTabPaid" onclick="switchBillTab('paid')" class="pb-2 text-slate-400 hover:text-slate-200">
+          Paid History
+        </button>
+      </div>
+
+      <!-- Bill Items List -->
+      <div id="billsList" class="space-y-2.5"></div>
+    </section>
+
+    <!-- Modular Section: Savings & Investment Goals Vault -->
+    <section id="sectionSavingsVault" class="bg-[#111726] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="min-w-0">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200">Savings & Investment Vault</h2>
+          <p class="text-xs text-slate-400 truncate">Scheduled reminders for SIPs, emergency funds, and goals</p>
+        </div>
+        <button onclick="openSavingsModal()" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white transition whitespace-nowrap">
+          + Add Goal
+        </button>
+      </div>
+
+      <div id="goalsList" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+    </section>
+
+    <!-- Modular Section: Unified Transactions History -->
+    <section id="sectionMasterLedger" class="bg-[#111726] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200">Master Ledger</h2>
+          <p class="text-xs text-slate-400">Incomes, expenses, paid bills & savings deposits</p>
+        </div>
+        
+        <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs">
+          <button onclick="filterTransactions('all')" id="txFilterAll" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-medium">All</button>
+          <button onclick="filterTransactions('income')" id="txFilterIncome" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-slate-200 font-medium">Income</button>
+          <button onclick="filterTransactions('expense')" id="txFilterExpense" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-slate-200 font-medium">Expense</button>
+          <button onclick="filterTransactions('savings')" id="txFilterSavings" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-slate-200 font-medium">Savings</button>
+        </div>
+      </div>
+
+      <div id="transactionHistory" class="space-y-2"></div>
+    </section>
+
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+  <div id="modalBackdrop" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden transition-opacity flex items-center justify-center p-4">
+
+    <!-- 1. Profile Switcher & Manager Modal -->
+    <div id="profileSwitchModal" class="bg-[#111726] border border-slate-800 rounded-3xl w-full max-w-md p-6 hidden shadow-2xl">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-lg font-bold text-white font-display flex items-center gap-2">
+          <i data-lucide="users" class="w-5 h-5 text-indigo-400"></i>
+          User Profiles
+        </h3>
+        <button type="button" onclick="closeAllModals()" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4">Switch between isolated workspaces or create a customized new profile.</p>
+
+      <div id="profilesListContainer" class="space-y-2 max-h-56 overflow-y-auto custom-scroll mb-4">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div class="flex gap-2 pt-2 border-t border-slate-800/80">
+        <button type="button" onclick="openCreateProfileModal()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Create New Profile</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. Create / Edit Profile Modal with Feature Selectors -->
+    <div id="profileFormModal" class="bg-[#111726] border border-slate-800 rounded-3xl w-full max-w-md p-6 hidden shadow-2xl">
+      <div class="flex items-center justify-between mb-2">
+        <h3 id="profileFormTitle" class="text-lg font-bold text-white font-display">Create Custom Profile</h3>
+        <button type="button" onclick="closeAllModals()" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4">Select what tools and modules you want enabled for this profile.</p>
+
+      <form onsubmit="handleSaveProfile(event)" class="space-y-4">
+        <input type="hidden" id="profileEditId">
+        
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Profile Name</label>
+          <input type="text" id="profileInputName" required placeholder="e.g. Personal, Business, Side Hustle" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white text-sm focus:border-indigo-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-2">Enabled Features & Modules</label>
+          <div class="space-y-2 bg-slate-900/60 border border-slate-800/80 p-3 rounded-2xl">
+            <label class="flex items-center justify-between text-xs text-slate-200 cursor-pointer py-1">
+              <span class="flex items-center gap-2">
+                <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+                1-Click Quick Presets
+              </span>
+              <input type="checkbox" id="featPresets" checked class="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-800 border-slate-700">
+            </label>
+            <label class="flex items-center justify-between text-xs text-slate-200 cursor-pointer py-1">
+              <span class="flex items-center gap-2">
+                <i data-lucide="receipt" class="w-3.5 h-3.5 text-blue-400"></i>
+                Utility Bills & Recharges Tracker
+              </span>
+              <input type="checkbox" id="featBills" checked class="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-800 border-slate-700">
+            </label>
+            <label class="flex items-center justify-between text-xs text-slate-200 cursor-pointer py-1">
+              <span class="flex items-center gap-2">
+                <i data-lucide="gem" class="w-3.5 h-3.5 text-violet-400"></i>
+                Savings & Investment Vault
+              </span>
+              <input type="checkbox" id="featSavings" checked class="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-800 border-slate-700">
+            </label>
+            <label class="flex items-center justify-between text-xs text-slate-200 cursor-pointer py-1">
+              <span class="flex items-center gap-2">
+                <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-rose-400"></i>
+                Budget Spending Limits & Multi-Tier Warnings
+              </span>
+              <input type="checkbox" id="featBudget" checked class="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-800 border-slate-700">
+            </label>
+            <label class="flex items-center justify-between text-xs text-slate-200 cursor-pointer py-1">
+              <span class="flex items-center gap-2">
+                <i data-lucide="list" class="w-3.5 h-3.5 text-emerald-400"></i>
+                Master Ledger & Transaction History
+              </span>
+              <input type="checkbox" id="featLedger" checked class="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-800 border-slate-700">
+            </label>
+            <label class="flex items-center justify-between text-xs text-slate-200 cursor-pointer py-1">
+              <span class="flex items-center gap-2">
+                <i data-lucide="file-text" class="w-3.5 h-3.5 text-indigo-400"></i>
+                PDF & JSON Backup Tools
+              </span>
+              <input type="checkbox" id="featExport" checked class="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-800 border-slate-700">
+            </label>
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAllModals()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">Cancel</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-lg shadow-indigo-600/30">Save Profile</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 3. Dedicated PDF Timeline Selection Modal -->
+    <div id="pdfTimelineModal" class="bg-[#111726] border border-slate-800 rounded-3xl w-full max-w-md p-6 hidden shadow-2xl">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="text-lg font-bold text-indigo-400 font-display flex items-center gap-2">
+          <i data-lucide="file-text" class="w-5 h-5 text-indigo-400"></i>
+          Export Statement PDF
+        </h3>
+        <button type="button" onclick="closeAllModals()" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4">Choose the timeline and date range for your financial statement.</p>
+
+      <div class="grid grid-cols-4 gap-1.5 mb-4 text-xs font-medium">
+        <button type="button" onclick="setPDFQuickRange('month')" class="py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-indigo-600/30 text-slate-200 border border-slate-700 text-center transition">This Month</button>
+        <button type="button" onclick="setPDFQuickRange('lastMonth')" class="py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-indigo-600/30 text-slate-200 border border-slate-700 text-center transition">Last Month</button>
+        <button type="button" onclick="setPDFQuickRange('year')" class="py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-indigo-600/30 text-slate-200 border border-slate-700 text-center transition">This Year</button>
+        <button type="button" onclick="setPDFQuickRange('all')" class="py-1.5 px-2 rounded-xl bg-indigo-600 text-white border border-indigo-500 text-center transition">All Time</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">From Date</label>
+          <input type="date" id="pdfStartDate" onchange="updatePDFCountPreview()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:border-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">To Date</label>
+          <input type="date" id="pdfEndDate" onchange="updatePDFCountPreview()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:border-indigo-500 focus:outline-none">
+        </div>
+      </div>
+
+      <div class="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs mb-5 flex items-center justify-between">
+        <span class="text-slate-400">Transactions included:</span>
+        <span id="pdfPreviewCount" class="font-mono font-bold text-indigo-400">0 entries</span>
+      </div>
+
+      <div class="flex gap-2">
+        <button type="button" onclick="closeAllModals()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">Cancel</button>
+        <button type="button" onclick="generateFilteredPDF()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-lg shadow-indigo-600/30">Download PDF</button>
+      </div>
+    </div>
+
+    <!-- 4. Income Modal -->
+    <div id="incomeModal" class="bg-[#111726] border border-slate-800 rounded-3xl w-full max-w-md p-6 hidden shadow-2xl">
+      <h3 class="text-lg font-bold text-emerald-400 font-display mb-1">+ Credit Income / Salary</h3>
+      <p class="text-xs text-slate-400 mb-4">Add your salary, dividend, freelance wage, or business profit.</p>
+      
+      <form onsubmit="handleIncomeSubmit(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Amount</label>
+          <input type="number" step="0.01" id="incAmount" required placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono focus:border-emerald-500 focus:outline-none text-base">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Source / Description</label>
+          <input type="text" id="incDesc" required placeholder="e.g. Salary, Client Project, Dividends" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:border-emerald-500 focus:outline-none text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Date</label>
+          <input type="date" id="incDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:border-emerald-500 focus:outline-none text-sm">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAllModals()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold">Cancel</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold shadow-lg shadow-emerald-600/30">Credit Income</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 5. Expense Modal -->
+    <div id="expenseModal" class="bg-[#111726] border border-slate-800 rounded-3xl w-full max-w-md p-6 hidden shadow-2xl">
+      <h3 class="text-lg font-bold text-rose-400 font-display mb-1">- Add Daily Expense</h3>
+      <p class="text-xs text-slate-400 mb-4">Log day-to-day spends, mart, food, travel, or fuel.</p>
+      
+      <form onsubmit="handleExpenseSubmit(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Amount</label>
+          <input type="number" step="0.01" id="expAmount" required placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono focus:border-rose-500 focus:outline-none text-base">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Category</label>
+          <select id="expCategory" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:border-rose-500 focus:outline-none text-sm">
+            <option value="Food & Dining">Food & Dining</option>
+            <option value="Groceries & Mart">Groceries & Mart</option>
+            <option value="Transportation / Fuel">Transportation / Fuel</option>
+            <option value="Shopping & Gadgets">Shopping & Gadgets</option>
+            <option value="Healthcare">Healthcare</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Other Spends">Other Spends</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Description</label>
+          <input type="text" id="expDesc" required placeholder="e.g. Lunch with team, Fuel, Shopping" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:border-rose-500 focus:outline-none text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Date</label>
+          <input type="date" id="expDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:border-rose-500 focus:outline-none text-sm">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAllModals()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold">Cancel</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold shadow-lg shadow-rose-600/30">Log Expense</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 6. Bill Modal -->
+    <div id="billModal" class="bg-[#111726] border border-slate-800 rounded-3xl w-full max-w-md p-6 hidden shadow-2xl">
+      <h3 class="text-lg font-bold text-blue-400 font-display mb-1">⚡ Add Recurring / Utility Bill</h3>
+      <p class="text-xs text-slate-400 mb-4">Schedule electricity, wifi, recharge, or gas bills.</p>
+      
+      <form onsubmit="handleBillSubmit(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Bill Name / Utility</label>
+          <input type="text" id="billName" required placeholder="e.g. Electricity Bill, Jio Fiber, Airtel SIM" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:border-blue-500 focus:outline-none text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Bill Category</label>
+          <select id="billCategory" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:border-blue-500 focus:outline-none text-sm">
+            <option value="Electricity">Electricity</option>
+            <option value="Wi-Fi / Broadband">Wi-Fi / Broadband</option>
+            <option value="Mobile Recharge">Mobile Recharge</option>
+            <option value="Gas / LPG">Gas / LPG</option>
+            <option value="Water Supply">Water Supply</option>
+            <option value="DTH / Streaming">DTH / Streaming</option>
+            <option value="Rent / Maintenance">Rent / Maintenance</option>
+            <option value="Insurance / EMI">Insurance / EMI</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Amount (0 if variable)</label>
+            <input type="number" step="0.01" id="billAmount" placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono focus:border-blue-500 focus:outline-none text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Due Date</label>
+            <input type="date" id="billDueDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:border-blue-500 focus:outline-none text-sm">
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAllModals()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold">Cancel</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg shadow-blue-600/30">Save Bill</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 7. Mark As Paid Modal -->
+    <div id="markPaidModal" class="bg-[#111726] border border-slate-800 rounded-3xl w-full max-w-md p-6 hidden shadow-2xl">
+      <h3 class="text-lg font-bold text-emerald-400 font-display mb-1">Confirm Bill Payment</h3>
+      <p id="markPaidBillTitle" class="text-xs text-slate-400 mb-4">Enter the final bill amount paid for this cycle.</p>
+      
+      <form onsubmit="handleConfirmPaid(event)" class="space-y-3.5">
+        <input type="hidden" id="markPaidBillId">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Amount Paid</label>
+          <input type="number" step="0.01" id="markPaidAmount" required placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono focus:border-emerald-500 focus:outline-none text-base">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Payment Date</label>
+          <input type="date" id="markPaidDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:border-emerald-500 focus:outline-none text-sm">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAllModals()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold">Cancel</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold shadow-lg shadow-emerald-600/30">Confirm & Record</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 8. Savings / Goal Modal -->
+    <div id="savingsModal" class="bg-[#111726] border border-slate-800 rounded-3xl w-full max-w-md p-6 hidden shadow-2xl">
+      <h3 class="text-lg font-bold text-violet-400 font-display mb-1">💎 Create Savings / Investment Goal</h3>
+      <p class="text-xs text-slate-400 mb-4">Set target and scheduled reminder dates for investments.</p>
+      
+      <form onsubmit="handleSavingsSubmit(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Goal / Investment Name</label>
+          <input type="text" id="goalName" required placeholder="e.g. Nifty 50 SIP, Emergency Fund, Gold" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:border-violet-500 focus:outline-none text-sm">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Target Amount</label>
+            <input type="number" step="0.01" id="goalTarget" required placeholder="50000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono focus:border-violet-500 focus:outline-none text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Current Saved</label>
+            <input type="number" step="0.01" id="goalCurrent" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono focus:border-violet-500 focus:outline-none text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Scheduled Reminder Date</label>
+          <input type="date" id="goalReminderDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:border-violet-500 focus:outline-none text-sm">
+          <p class="text-[11px] text-slate-400 mt-1">App alerts you to transfer funds when this date arrives.</p>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAllModals()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold">Cancel</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold shadow-lg shadow-violet-600/30">Create Goal</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 9. Deposit to Goal Modal -->
+    <div id="depositGoalModal" class="bg-[#111726] border border-slate-800 rounded-3xl w-full max-w-md p-6 hidden shadow-2xl">
+      <h3 class="text-lg font-bold text-violet-400 font-display mb-1">Transfer into Vault</h3>
+      <p id="depositGoalTitle" class="text-xs text-slate-400 mb-4">Transfer money into your investment or savings vault.</p>
+      
+      <form onsubmit="handleDepositSubmit(event)" class="space-y-3.5">
+        <input type="hidden" id="depositGoalId">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Transfer Amount</label>
+          <input type="number" step="0.01" id="depositAmount" required placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono focus:border-violet-500 focus:outline-none text-base">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Date</label>
+          <input type="date" id="depositDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:border-violet-500 focus:outline-none text-sm">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAllModals()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold">Cancel</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold shadow-lg shadow-violet-600/30">Record Deposit</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 10. Budget Limit Modal -->
+    <div id="limitModal" class="bg-[#111726] border border-slate-800 rounded-3xl w-full max-w-md p-6 hidden shadow-2xl">
+      <h3 class="text-lg font-bold text-indigo-400 font-display mb-1">Set Spending Limits</h3>
+      <p class="text-xs text-slate-400 mb-4">Set your spending ceiling. Limit usage naturally resets to 0 every calendar month and year.</p>
+      
+      <form onsubmit="handleLimitSubmit(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Monthly Spending Limit Ceiling</label>
+          <input type="number" step="1" id="limitMonthInput" required placeholder="0 (0 disables gauge)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono focus:border-indigo-500 focus:outline-none text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Yearly Spending Limit Ceiling</label>
+          <input type="number" step="1" id="limitYearInput" required placeholder="0 (0 disables gauge)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono focus:border-indigo-500 focus:outline-none text-sm">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAllModals()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold">Cancel</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg">Save Limits</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 11. Variable Preset Prompt Modal -->
+    <div id="variablePresetModal" class="bg-[#111726] border border-slate-800 rounded-3xl w-full max-w-md p-6 hidden shadow-2xl">
+      <h3 id="varPresetTitle" class="text-lg font-bold text-amber-400 font-display mb-1">Quick Log Expense</h3>
+      <p id="varPresetDesc" class="text-xs text-slate-400 mb-4">Enter amount spent for this transaction.</p>
+      
+      <form onsubmit="handleVariablePresetSubmit(event)" class="space-y-3.5">
+        <input type="hidden" id="varPresetIndex">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Amount</label>
+          <input type="number" step="0.01" id="varPresetAmount" required autofocus placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono focus:border-amber-500 focus:outline-none text-base">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAllModals()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold">Cancel</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-lg">Log Now</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 12. Preset Customizer Modal -->
+    <div id="presetModal" class="bg-[#111726] border border-slate-800 rounded-3xl w-full max-w-md p-6 hidden shadow-2xl relative">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="text-lg font-bold text-amber-400 font-display">Customize Quick Presets</h3>
+        <button type="button" onclick="closeAllModals()" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4">Create 1-click buttons. Set amount to 0 for variable prompts.</p>
+      
+      <form onsubmit="handleAddPreset(event)" class="space-y-3 border-b border-slate-800 pb-4 mb-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Preset Label</label>
+          <input type="text" id="newPresetLabel" required placeholder="e.g. Coffee, Metro, Broadband" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Amount (0 = Ask)</label>
+            <input type="number" step="0.01" id="newPresetAmount" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Category</label>
+            <select id="newPresetCat" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs">
+              <option value="Food & Dining">Food</option>
+              <option value="Transportation / Fuel">Transport</option>
+              <option value="Groceries & Mart">Groceries</option>
+              <option value="Electricity">Electricity</option>
+              <option value="Wi-Fi / Broadband">Wi-Fi</option>
+              <option value="Mobile Recharge">Recharge</option>
+              <option value="Other Spends">Other</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition">+ Add Preset</button>
+      </form>
+
+      <div class="space-y-1.5 max-h-48 overflow-y-auto custom-scroll" id="currentPresetsList"></div>
+
+      <div class="pt-4">
+        <button type="button" onclick="closeAllModals()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition">Done</button>
+      </div>
+    </div>
+
+    <!-- 13. Dedicated Confirmation Modal -->
+    <div id="confirmModal" class="bg-[#111726] border border-slate-800 rounded-3xl w-full max-w-sm p-6 hidden shadow-2xl">
+      <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center mb-4 mx-auto">
+        <i data-lucide="trash-2" class="w-6 h-6"></i>
+      </div>
+      <h3 id="confirmTitle" class="text-base font-bold text-white text-center mb-1">Confirm Action</h3>
+      <p id="confirmMessage" class="text-xs text-slate-400 text-center mb-5 leading-relaxed">Are you sure you want to proceed?</p>
+      
+      <div class="flex gap-2">
+        <button type="button" onclick="closeConfirmModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">Cancel</button>
+        <button type="button" id="confirmProceedBtn" class="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition shadow-lg shadow-rose-600/30">Yes, Proceed</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Javascript Core Logic -->
+  <script>
+    // System Master State: Multi-profile store
+    let masterStore = {
+      activeProfileId: 'prof_default',
+      profiles: [
+        {
+          id: 'prof_default',
+          name: 'Personal',
+          currency: '₹',
+          features: {
+            presets: true,
+            bills: true,
+            savings: true,
+            budget: true,
+            ledger: true,
+            export: true
+          },
+          // Limits start at 0 for new profiles; ceiling remains set, usage calculates strictly dynamically
+          limits: {
+            monthly: 0,
+            yearly: 0
+          },
+          transactions: [],
+          bills: [],
+          goals: [],
+          presets: [
+            { label: 'Electricity Bill', amount: 0, category: 'Electricity', icon: 'zap' },
+            { label: 'Wi-Fi Bill', amount: 0, category: 'Wi-Fi / Broadband', icon: 'wifi' },
+            { label: 'Mobile Recharge', amount: 0, category: 'Mobile Recharge', icon: 'smartphone' }
+          ]
+        }
+      ]
+    };
+
+    let activeFilter = 'all';
+    let currentBillTab = 'unpaid';
+    let confirmCallback = null;
+    let returnToModalId = null;
+
+    // Helper: Access Active Profile Data
+    function getActiveProfile() {
+      let p = masterStore.profiles.find(item => item.id === masterStore.activeProfileId);
+      if (!p) {
+        masterStore.activeProfileId = masterStore.profiles[0].id;
+        p = masterStore.profiles[0];
+      }
+      return p;
+    }
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      loadMasterFromStorage();
+      setDefaultDates();
+      renderAll();
+      lucide.createIcons();
+    });
+
+    function setDefaultDates() {
+      const today = new Date().toISOString().split('T')[0];
+      ['incDate', 'expDate', 'billDueDate', 'markPaidDate', 'goalReminderDate', 'depositDate', 'pdfEndDate'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = today;
+      });
+      const startEl = document.getElementById('pdfStartDate');
+      if (startEl) startEl.value = '2026-01-01';
+    }
+
+    function saveMasterToStorage() {
+      localStorage.setItem('easytrack_multiprofile_store', JSON.stringify(masterStore));
+    }
+
+    function loadMasterFromStorage() {
+      const saved = localStorage.getItem('easytrack_multiprofile_store');
+      if (saved) {
+        try {
+          masterStore = JSON.parse(saved);
+        } catch (e) {
+          console.error("Storage corrupted", e);
+        }
+      }
+      const curProfile = getActiveProfile();
+      document.getElementById('currencySelector').value = curProfile.currency || '₹';
+    }
+
+    function changeCurrency(val) {
+      const curProfile = getActiveProfile();
+      curProfile.currency = val;
+      saveMasterToStorage();
+      renderAll();
+    }
+
+    // ==========================================
+    // MULTI-PROFILE LOGIC & FEATURE GATING
+    // ==========================================
+    function openProfileSwitchModal() {
+      const container = document.getElementById('profilesListContainer');
+      container.innerHTML = masterStore.profiles.map(p => {
+        const isActive = p.id === masterStore.activeProfileId;
+        const initial = p.name ? p.name.charAt(0).toUpperCase() : 'P';
+        return `
+          <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-900 border ${isActive ? 'border-indigo-500/80 bg-indigo-950/20' : 'border-slate-800'} text-xs">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold">
+                ${initial}
+              </div>
+              <div>
+                <div class="font-bold text-white flex items-center gap-1.5">
+                  ${p.name}
+                  ${isActive ? '<span class="text-[9px] px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-indigo-400 font-semibold uppercase">Active</span>' : ''}
+                </div>
+                <div class="text-[11px] text-slate-400 mt-0.5 font-mono">
+                  ${p.transactions.length} entries • ${p.currency}
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              ${!isActive ? `
+                <button onclick="switchActiveProfile('${p.id}')" class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold transition">
+                  Switch
+                </button>
+              ` : ''}
+              <button onclick="openEditProfileModal('${p.id}')" title="Configure Profile Features" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+                <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+              </button>
+              ${masterStore.profiles.length > 1 ? `
+                <button onclick="deleteProfile('${p.id}')" title="Delete Profile" class="w-7 h-7 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 flex items-center justify-center transition">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+      openModal('profileSwitchModal');
+    }
+
+    function switchActiveProfile(profileId) {
+      masterStore.activeProfileId = profileId;
+      saveMasterToStorage();
+      closeAllModals();
+      renderAll();
+    }
+
+    function openCreateProfileModal() {
+      document.getElementById('profileEditId').value = '';
+      document.getElementById('profileFormTitle').textContent = 'Create New Profile';
+      document.getElementById('profileInputName').value = '';
+      
+      // Default all features checked
+      ['featPresets', 'featBills', 'featSavings', 'featBudget', 'featLedger', 'featExport'].forEach(id => {
+        document.getElementById(id).checked = true;
+      });
+
+      openModal('profileFormModal');
+    }
+
+    function openEditProfileModal(profileId) {
+      const p = masterStore.profiles.find(item => item.id === profileId);
+      if (!p) return;
+
+      document.getElementById('profileEditId').value = p.id;
+      document.getElementById('profileFormTitle').textContent = `Configure "${p.name}"`;
+      document.getElementById('profileInputName').value = p.name;
+      
+      document.getElementById('featPresets').checked = p.features.presets !== false;
+      document.getElementById('featBills').checked = p.features.bills !== false;
+      document.getElementById('featSavings').checked = p.features.savings !== false;
+      document.getElementById('featBudget').checked = p.features.budget !== false;
+      document.getElementById('featLedger').checked = p.features.ledger !== false;
+      document.getElementById('featExport').checked = p.features.export !== false;
+
+      openModal('profileFormModal');
+    }
+
+    function handleSaveProfile(e) {
+      e.preventDefault();
+      const editId = document.getElementById('profileEditId').value;
+      const name = document.getElementById('profileInputName').value.trim();
+      if (!name) return;
+
+      const features = {
+        presets: document.getElementById('featPresets').checked,
+        bills: document.getElementById('featBills').checked,
+        savings: document.getElementById('featSavings').checked,
+        budget: document.getElementById('featBudget').checked,
+        ledger: document.getElementById('featLedger').checked,
+        export: document.getElementById('featExport').checked
+      };
+
+      if (editId) {
+        // Edit existing profile
+        const p = masterStore.profiles.find(item => item.id === editId);
+        if (p) {
+          p.name = name;
+          p.features = features;
+        }
+      } else {
+        // Create new profile with completely clean slate
+        const newProf = {
+          id: 'prof_' + Date.now(),
+          name,
+          currency: '₹',
+          features,
+          limits: { monthly: 0, yearly: 0 },
+          transactions: [],
+          bills: [],
+          goals: [],
+          presets: features.presets ? [
+            { label: 'Electricity Bill', amount: 0, category: 'Electricity', icon: 'zap' },
+            { label: 'Wi-Fi Bill', amount: 0, category: 'Wi-Fi / Broadband', icon: 'wifi' },
+            { label: 'Mobile Recharge', amount: 0, category: 'Mobile Recharge', icon: 'smartphone' }
+          ] : []
+        };
+        masterStore.profiles.push(newProf);
+        masterStore.activeProfileId = newProf.id;
+      }
+
+      saveMasterToStorage();
+      closeAllModals();
+      renderAll();
+    }
+
+    function deleteProfile(profileId) {
+      if (masterStore.profiles.length <= 1) return;
+      const p = masterStore.profiles.find(item => item.id === profileId);
+      requestConfirmation({
+        title: 'Delete Profile?',
+        message: `Permanently delete "${p ? p.name : 'this profile'}" and all of its transactions, bills, and goals?`,
+        btnText: 'Delete Profile',
+        returnModal: 'profileSwitchModal',
+        onConfirm: () => {
+          masterStore.profiles = masterStore.profiles.filter(item => item.id !== profileId);
+          if (masterStore.activeProfileId === profileId) {
+            masterStore.activeProfileId = masterStore.profiles[0].id;
+          }
+          saveMasterToStorage();
+          renderAll();
+        }
+      });
+    }
+
+    function applyFeatureVisibility(features) {
+      const toggle = (elId, show) => {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        if (show) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+      };
+
+      toggle('sectionQuickPresets', features.presets);
+      toggle('sectionUtilityBills', features.bills);
+      toggle('btnPillarBill', features.bills);
+      toggle('sectionSavingsVault', features.savings);
+      toggle('btnPillarSavings', features.savings);
+      toggle('sectionBudgetGauges', features.budget);
+      toggle('btnSetLimits', features.budget);
+      toggle('sectionMasterLedger', features.ledger);
+      toggle('exportToolsWrapper', features.export);
+    }
+
+    // Modal Control
+    function openModal(id) {
+      document.getElementById('modalBackdrop').classList.remove('hidden');
+      document.querySelectorAll('#modalBackdrop > div').forEach(el => el.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+      const curProfile = getActiveProfile();
+      if (id === 'limitModal') {
+        document.getElementById('limitMonthInput').value = curProfile.limits.monthly || '';
+        document.getElementById('limitYearInput').value = curProfile.limits.yearly || '';
+      }
+      if (id === 'presetModal') {
+        renderPresetCustomizer();
+      }
+      lucide.createIcons();
+    }
+
+    function closeAllModals() {
+      document.getElementById('modalBackdrop').classList.add('hidden');
+      document.querySelectorAll('#modalBackdrop > div').forEach(el => el.classList.add('hidden'));
+      returnToModalId = null;
+    }
+
+    function requestConfirmation({ title, message, btnText = 'Delete', returnModal = null, onConfirm }) {
+      confirmCallback = onConfirm;
+      returnToModalId = returnModal;
+      document.getElementById('confirmTitle').textContent = title || 'Confirm Action';
+      document.getElementById('confirmMessage').textContent = message || 'Are you sure you want to proceed?';
+      
+      const proceedBtn = document.getElementById('confirmProceedBtn');
+      proceedBtn.textContent = btnText;
+      proceedBtn.onclick = () => {
+        if (confirmCallback) confirmCallback();
+        closeConfirmModal();
+      };
+      
+      document.getElementById('modalBackdrop').classList.remove('hidden');
+      document.querySelectorAll('#modalBackdrop > div').forEach(el => el.classList.add('hidden'));
+      document.getElementById('confirmModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeConfirmModal() {
+      confirmCallback = null;
+      if (returnToModalId) {
+        const backTo = returnToModalId;
+        returnToModalId = null;
+        openModal(backTo);
+      } else {
+        closeAllModals();
+      }
+    }
+
+    function requestResetCurrentProfile() {
+      const curProfile = getActiveProfile();
+      requestConfirmation({
+        title: `Reset "${curProfile.name}" Data?`,
+        message: 'This will completely wipe all logged entries, utility bills, and savings vault goals in this profile. Configured limit ceilings and presets will remain clean.',
+        btnText: 'Yes, Wipe Data',
+        onConfirm: () => {
+          curProfile.transactions = [];
+          curProfile.bills = [];
+          curProfile.goals = [];
+          saveMasterToStorage();
+          renderAll();
+        }
+      });
+    }
+
+    function openIncomeModal() { openModal('incomeModal'); }
+    function openExpenseModal() { openModal('expenseModal'); }
+    function openBillModal() { openModal('billModal'); }
+    function openSavingsModal() { openModal('savingsModal'); }
+
+    // Forms Handlers
+    function handleIncomeSubmit(e) {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById('incAmount').value);
+      const desc = document.getElementById('incDesc').value.trim();
+      const date = document.getElementById('incDate').value;
+      if (!amount || amount <= 0) return;
+
+      const curProfile = getActiveProfile();
+      curProfile.transactions.unshift({
+        id: 'tx-' + Date.now(),
+        type: 'income',
+        amount: amount,
+        desc: desc,
+        category: 'Income',
+        date: date
+      });
+
+      saveMasterToStorage();
+      closeAllModals();
+      renderAll();
+      e.target.reset();
+      setDefaultDates();
+    }
+
+    function handleExpenseSubmit(e) {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById('expAmount').value);
+      const category = document.getElementById('expCategory').value;
+      const desc = document.getElementById('expDesc').value.trim();
+      const date = document.getElementById('expDate').value;
+      if (!amount || amount <= 0) return;
+
+      const curProfile = getActiveProfile();
+      curProfile.transactions.unshift({
+        id: 'tx-' + Date.now(),
+        type: 'expense',
+        amount: amount,
+        desc: desc,
+        category: category,
+        date: date
+      });
+
+      saveMasterToStorage();
+      closeAllModals();
+      renderAll();
+      e.target.reset();
+      setDefaultDates();
+    }
+
+    function handleBillSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('billName').value.trim();
+      const category = document.getElementById('billCategory').value;
+      const amount = parseFloat(document.getElementById('billAmount').value) || 0;
+      const dueDate = document.getElementById('billDueDate').value;
+
+      const curProfile = getActiveProfile();
+      curProfile.bills.push({
+        id: 'bill-' + Date.now(),
+        name,
+        category,
+        amount,
+        dueDate,
+        paid: false
+      });
+
+      saveMasterToStorage();
+      closeAllModals();
+      renderAll();
+      e.target.reset();
+      setDefaultDates();
+    }
+
+    function handleSavingsSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('goalName').value.trim();
+      const target = parseFloat(document.getElementById('goalTarget').value);
+      const current = parseFloat(document.getElementById('goalCurrent').value) || 0;
+      const reminderDate = document.getElementById('goalReminderDate').value;
+
+      const curProfile = getActiveProfile();
+      const newGoal = {
+        id: 'goal-' + Date.now(),
+        name,
+        target,
+        current: 0,
+        reminderDate
+      };
+
+      curProfile.goals.push(newGoal);
+
+      if (current > 0) {
+        newGoal.current = current;
+        curProfile.transactions.unshift({
+          id: 'tx-goal-' + Date.now(),
+          type: 'savings',
+          amount: current,
+          desc: `Initial Deposit: ${name}`,
+          category: 'Savings & Investment',
+          date: new Date().toISOString().split('T')[0],
+          goalRef: newGoal.id
+        });
+      }
+
+      saveMasterToStorage();
+      closeAllModals();
+      renderAll();
+      e.target.reset();
+      setDefaultDates();
+    }
+
+    function handleLimitSubmit(e) {
+      e.preventDefault();
+      const curProfile = getActiveProfile();
+      curProfile.limits.monthly = parseFloat(document.getElementById('limitMonthInput').value) || 0;
+      curProfile.limits.yearly = parseFloat(document.getElementById('limitYearInput').value) || 0;
+      saveMasterToStorage();
+      closeAllModals();
+      renderAll();
+    }
+
+    // Bill Actions
+    function openMarkPaidModal(billId) {
+      const curProfile = getActiveProfile();
+      const bill = curProfile.bills.find(b => b.id === billId);
+      if (!bill) return;
+
+      document.getElementById('markPaidBillId').value = bill.id;
+      document.getElementById('markPaidBillTitle').textContent = `Mark "${bill.name}" as paid. Enter final amount:`;
+      document.getElementById('markPaidAmount').value = bill.amount > 0 ? bill.amount : '';
+      openModal('markPaidModal');
+    }
+
+    function handleConfirmPaid(e) {
+      e.preventDefault();
+      const billId = document.getElementById('markPaidBillId').value;
+      const amountPaid = parseFloat(document.getElementById('markPaidAmount').value);
+      const paymentDate = document.getElementById('markPaidDate').value;
+
+      const curProfile = getActiveProfile();
+      const bill = curProfile.bills.find(b => b.id === billId);
+      if (bill && amountPaid > 0) {
+        bill.paid = true;
+        bill.paidDate = paymentDate;
+        bill.paidAmount = amountPaid;
+
+        curProfile.transactions.unshift({
+          id: 'tx-bill-' + bill.id + '-' + Date.now(),
+          type: 'expense',
+          amount: amountPaid,
+          desc: `Paid Bill: ${bill.name}`,
+          category: bill.category || 'Utilities',
+          date: paymentDate,
+          billRef: bill.id
+        });
+
+        saveMasterToStorage();
+        closeAllModals();
+        renderAll();
+      }
+    }
+
+    function markBillUnpaid(billId) {
+      const curProfile = getActiveProfile();
+      const bill = curProfile.bills.find(b => b.id === billId);
+      if (bill) {
+        requestConfirmation({
+          title: 'Mark Bill as Unpaid?',
+          message: `This will revert "${bill.name}" back to unpaid and remove its payment from your ledger.`,
+          btnText: 'Yes, Revert',
+          onConfirm: () => {
+            bill.paid = false;
+            curProfile.transactions = curProfile.transactions.filter(t => t.billRef !== bill.id);
+            saveMasterToStorage();
+            renderAll();
+          }
+        });
+      }
+    }
+
+    function deleteBill(billId) {
+      const curProfile = getActiveProfile();
+      const bill = curProfile.bills.find(b => b.id === billId);
+      requestConfirmation({
+        title: 'Delete Utility Bill?',
+        message: `Are you sure you want to remove "${bill ? bill.name : 'this bill'}"? Any related ledger payments will be removed.`,
+        btnText: 'Delete Bill',
+        onConfirm: () => {
+          curProfile.bills = curProfile.bills.filter(b => b.id !== billId);
+          curProfile.transactions = curProfile.transactions.filter(t => t.billRef !== billId);
+          saveMasterToStorage();
+          renderAll();
+        }
+      });
+    }
+
+    // Savings & Goal Actions
+    function openDepositModal(goalId) {
+      const curProfile = getActiveProfile();
+      const goal = curProfile.goals.find(g => g.id === goalId);
+      if (!goal) return;
+      document.getElementById('depositGoalId').value = goal.id;
+      document.getElementById('depositGoalTitle').textContent = `Deposit funds into "${goal.name}"`;
+      openModal('depositGoalModal');
+    }
+
+    function handleDepositSubmit(e) {
+      e.preventDefault();
+      const goalId = document.getElementById('depositGoalId').value;
+      const amount = parseFloat(document.getElementById('depositAmount').value);
+      const date = document.getElementById('depositDate').value;
+
+      const curProfile = getActiveProfile();
+      const goal = curProfile.goals.find(g => g.id === goalId);
+      if (goal && amount > 0) {
+        goal.current = (goal.current || 0) + amount;
+
+        curProfile.transactions.unshift({
+          id: 'tx-goal-' + Date.now(),
+          type: 'savings',
+          amount: amount,
+          desc: `Vault Transfer: ${goal.name}`,
+          category: 'Savings & Investment',
+          date: date,
+          goalRef: goal.id
+        });
+
+        saveMasterToStorage();
+        closeAllModals();
+        renderAll();
+        e.target.reset();
+        setDefaultDates();
+      }
+    }
+
+    function deleteGoal(goalId) {
+      const curProfile = getActiveProfile();
+      const goal = curProfile.goals.find(g => g.id === goalId);
+      requestConfirmation({
+        title: 'Delete Savings Goal?',
+        message: `Are you sure you want to delete "${goal ? goal.name : 'this goal'}"? Any transactions linked to this vault will also be removed.`,
+        btnText: 'Delete Goal',
+        onConfirm: () => {
+          curProfile.goals = curProfile.goals.filter(g => g.id !== goalId);
+          curProfile.transactions = curProfile.transactions.filter(t => t.goalRef !== goalId);
+          saveMasterToStorage();
+          renderAll();
+        }
+      });
+    }
+
+    // Presets
+    function triggerPreset(index) {
+      const curProfile = getActiveProfile();
+      const preset = curProfile.presets[index];
+      if (!preset) return;
+
+      if (!preset.amount || preset.amount <= 0) {
+        document.getElementById('varPresetIndex').value = index;
+        document.getElementById('varPresetTitle').textContent = `Log ${preset.label}`;
+        document.getElementById('varPresetDesc').textContent = `Category: ${preset.category}. Enter amount:`;
+        document.getElementById('varPresetAmount').value = '';
+        openModal('variablePresetModal');
+      } else {
+        logPresetAmount(preset, preset.amount);
+      }
+    }
+
+    function handleVariablePresetSubmit(e) {
+      e.preventDefault();
+      const idx = document.getElementById('varPresetIndex').value;
+      const amount = parseFloat(document.getElementById('varPresetAmount').value);
+      const curProfile = getActiveProfile();
+      const preset = curProfile.presets[idx];
+
+      if (preset && amount > 0) {
+        logPresetAmount(preset, amount);
+        closeAllModals();
+      }
+    }
+
+    function logPresetAmount(preset, amount) {
+      const today = new Date().toISOString().split('T')[0];
+      const curProfile = getActiveProfile();
+      curProfile.transactions.unshift({
+        id: 'tx-pre-' + Date.now(),
+        type: 'expense',
+        amount: amount,
+        desc: preset.label,
+        category: preset.category,
+        date: today
+      });
+      saveMasterToStorage();
+      renderAll();
+    }
+
+    function handleAddPreset(e) {
+      e.preventDefault();
+      const label = document.getElementById('newPresetLabel').value.trim();
+      const amount = parseFloat(document.getElementById('newPresetAmount').value) || 0;
+      const category = document.getElementById('newPresetCat').value;
+
+      const curProfile = getActiveProfile();
+      curProfile.presets.push({ label, amount, category, icon: 'tag' });
+      saveMasterToStorage();
+      renderPresetCustomizer();
+      renderQuickPresets();
+      document.getElementById('newPresetLabel').value = '';
+      document.getElementById('newPresetAmount').value = '';
+    }
+
+    function removePreset(index) {
+      const curProfile = getActiveProfile();
+      const preset = curProfile.presets[index];
+      requestConfirmation({
+        title: 'Delete Quick Preset?',
+        message: `Are you sure you want to remove the preset button for "${preset ? preset.label : 'this preset'}"?`,
+        btnText: 'Delete Preset',
+        returnModal: 'presetModal',
+        onConfirm: () => {
+          curProfile.presets.splice(index, 1);
+          saveMasterToStorage();
+          renderPresetCustomizer();
+          renderQuickPresets();
+        }
+      });
+    }
+
+    function renderPresetCustomizer() {
+      const container = document.getElementById('currentPresetsList');
+      const curProfile = getActiveProfile();
+      if (!curProfile.presets || curProfile.presets.length === 0) {
+        container.innerHTML = `<div class="text-center py-4 text-xs text-slate-500">No presets saved in this profile. Add one above!</div>`;
+        return;
+      }
+
+      container.innerHTML = curProfile.presets.map((p, i) => `
+        <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-xs">
+          <div>
+            <span class="font-semibold text-white">${p.label}</span>
+            <span class="text-slate-400 ml-1.5 font-mono">(${p.amount > 0 ? curProfile.currency + p.amount : 'Variable'})</span>
+          </div>
+          <button onclick="removePreset(${i})" title="Delete Preset" class="w-7 h-7 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 flex items-center justify-center transition">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    // ==========================================
+    // CYCLE DATES & DYNAMIC LIMIT USAGE LOGIC
+    // ==========================================
+    function calculateTotals() {
+      const now = new Date();
+      const curYear = now.getFullYear();
+      const curMonth = now.getMonth();
+      const curDay = now.getDate();
+
+      let stats = {
+        today: { income: 0, expense: 0, savings: 0 },
+        month: { income: 0, expense: 0, savings: 0 },
+        year: { income: 0, expense: 0, savings: 0 }
+      };
+
+      const curProfile = getActiveProfile();
+
+      curProfile.transactions.forEach(tx => {
+        if (!tx.date) return;
+        const [yStr, mStr, dStr] = tx.date.split('-');
+        const tYear = parseInt(yStr, 10);
+        const tMonth = parseInt(mStr, 10) - 1;
+        const tDay = parseInt(dStr, 10);
+
+        const isToday = (tYear === curYear && tMonth === curMonth && tDay === curDay);
+        const isThisMonth = (tYear === curYear && tMonth === curMonth);
+        const isThisYear = (tYear === curYear);
+
+        if (tx.type === 'income') {
+          if (isToday) stats.today.income += tx.amount;
+          if (isThisMonth) stats.month.income += tx.amount;
+          if (isThisYear) stats.year.income += tx.amount;
+        } else if (tx.type === 'expense') {
+          if (isToday) stats.today.expense += tx.amount;
+          if (isThisMonth) stats.month.expense += tx.amount;
+          if (isThisYear) stats.year.expense += tx.amount;
+        } else if (tx.type === 'savings') {
+          if (isToday) stats.today.savings += tx.amount;
+          if (isThisMonth) stats.month.savings += tx.amount;
+          if (isThisYear) stats.year.savings += tx.amount;
+        }
+      });
+
+      return stats;
+    }
+
+    function renderThresholds(monthExpense, yearExpense) {
+      const curProfile = getActiveProfile();
+      const mLimit = curProfile.limits.monthly || 0;
+      const yLimit = curProfile.limits.yearly || 0;
+
+      const mBar = document.getElementById('monthlyLimitBar');
+      const yBar = document.getElementById('yearlyLimitBar');
+      const banner = document.getElementById('thresholdBanner');
+
+      // If limits are not set (ceiling = 0), gauge rests cleanly at 0% with no warnings
+      if (mLimit <= 0 && yLimit <= 0) {
+        mBar.style.width = '0%';
+        yBar.style.width = '0%';
+        document.getElementById('monthlyLimitStats').textContent = `${curProfile.currency}${monthExpense.toLocaleString()} spent (No limit set)`;
+        document.getElementById('yearlyLimitStats').textContent = `${curProfile.currency}${yearExpense.toLocaleString()} spent (No limit set)`;
+        banner.classList.add('hidden');
+        return;
+      }
+
+      const mRatio = mLimit > 0 ? (monthExpense / mLimit) * 100 : 0;
+      const yRatio = yLimit > 0 ? (yearExpense / yLimit) * 100 : 0;
+
+      mBar.style.width = Math.min(mRatio, 100) + '%';
+      yBar.style.width = Math.min(yRatio, 100) + '%';
+
+      document.getElementById('monthlyLimitStats').textContent = mLimit > 0 
+        ? `${curProfile.currency}${monthExpense.toLocaleString()} / ${curProfile.currency}${mLimit.toLocaleString()} (${mRatio.toFixed(1)}%)`
+        : `${curProfile.currency}${monthExpense.toLocaleString()} spent (No limit set)`;
+
+      document.getElementById('yearlyLimitStats').textContent = yLimit > 0 
+        ? `${curProfile.currency}${yearExpense.toLocaleString()} / ${curProfile.currency}${yLimit.toLocaleString()} (${yRatio.toFixed(1)}%)`
+        : `${curProfile.currency}${yearExpense.toLocaleString()} spent (No limit set)`;
+
+      const getColor = (pct) => {
+        if (pct >= 100) return 'bg-rose-600 animate-pulse';
+        if (pct >= 90) return 'bg-rose-500';
+        if (pct >= 80) return 'bg-amber-500';
+        if (pct >= 75) return 'bg-yellow-400';
+        return 'bg-emerald-500';
+      };
+
+      mBar.className = `h-full rounded-full transition-all duration-500 ${getColor(mRatio)}`;
+      yBar.className = `h-full rounded-full transition-all duration-500 ${getColor(yRatio)}`;
+
+      // Multi-tier warning alerts at 75, 80, 85, 90, 95, 100%
+      let highestThreshold = null;
+      let targetPeriod = '';
+      let ratioVal = 0;
+
+      if (mLimit > 0 && mRatio >= 75) {
+        targetPeriod = 'Monthly';
+        ratioVal = mRatio;
+      }
+      if (yLimit > 0 && yRatio >= 75 && yRatio > mRatio) {
+        targetPeriod = 'Yearly';
+        ratioVal = yRatio;
+      }
+
+      if (ratioVal >= 100) highestThreshold = 100;
+      else if (ratioVal >= 95) highestThreshold = 95;
+      else if (ratioVal >= 90) highestThreshold = 90;
+      else if (ratioVal >= 85) highestThreshold = 85;
+      else if (ratioVal >= 80) highestThreshold = 80;
+      else if (ratioVal >= 75) highestThreshold = 75;
+
+      if (highestThreshold && curProfile.features.budget !== false) {
+        banner.classList.remove('hidden');
+        const isBreached = highestThreshold >= 100;
+        banner.className = `p-4 rounded-2xl border flex items-center justify-between ${
+          isBreached 
+            ? 'bg-rose-500/10 border-rose-500/40 text-rose-400' 
+            : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+        }`;
+
+        banner.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl ${isBreached ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400'} flex items-center justify-center shrink-0">
+              <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="font-bold text-xs uppercase tracking-wider">
+                ${isBreached ? '⚠️ Budget Limit Breached (100%+)' : `⚠️ Spending Warning: ${highestThreshold}% Hit`}
+              </div>
+              <p class="text-xs text-slate-300 mt-0.5">
+                Your <strong>${targetPeriod}</strong> cycle spend has reached <strong>${ratioVal.toFixed(1)}%</strong> of your preset limit ceiling.
+              </p>
+            </div>
+          </div>
+          <button onclick="openModal('limitModal')" class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 hover:border-slate-500 text-white shrink-0 ml-2">Adjust</button>
+        `;
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    function renderReminders() {
+      const container = document.getElementById('remindersContainer');
+      const todayStr = new Date().toISOString().split('T')[0];
+      const curProfile = getActiveProfile();
+      let alerts = [];
+
+      if (curProfile.features.bills !== false) {
+        curProfile.bills.filter(b => !b.paid && b.dueDate <= todayStr).forEach(b => {
+          alerts.push({
+            type: 'bill',
+            title: `Bill Due: ${b.name}`,
+            desc: `Due: ${b.dueDate} • Scheduled: ${b.amount > 0 ? curProfile.currency + b.amount : 'Variable'}`,
+            action: `openMarkPaidModal('${b.id}')`,
+            btnText: 'Pay Bill'
+          });
+        });
+      }
+
+      if (curProfile.features.savings !== false) {
+        curProfile.goals.filter(g => g.reminderDate && g.reminderDate <= todayStr).forEach(g => {
+          alerts.push({
+            type: 'savings',
+            title: `Investment Reminder: ${g.name}`,
+            desc: `Deposit Day! Saved: ${curProfile.currency}${g.current.toLocaleString()} / Target: ${curProfile.currency}${g.target.toLocaleString()}`,
+            action: `openDepositModal('${g.id}')`,
+            btnText: 'Transfer Now'
+          });
+        });
+      }
+
+      if (alerts.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      container.innerHTML = alerts.map(a => `
+        <div class="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2.5">
+            <span class="text-indigo-400 font-bold"><i data-lucide="bell-ring" class="w-4 h-4"></i></span>
+            <div>
+              <span class="font-bold text-white">${a.title}</span>
+              <p class="text-[11px] text-slate-300 mt-0.5">${a.desc}</p>
+            </div>
+          </div>
+          <button onclick="${a.action}" class="px-2.5 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shrink-0 ml-3">
+            ${a.btnText}
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // Master Render Method
+    function renderAll() {
+      const curProfile = getActiveProfile();
+      const curr = curProfile.currency || '₹';
+
+      // Header profile labels & avatar
+      document.getElementById('activeProfileName').textContent = curProfile.name;
+      document.getElementById('profileAvatar').textContent = curProfile.name ? curProfile.name.charAt(0).toUpperCase() : 'P';
+      document.getElementById('currencySelector').value = curr;
+
+      // Apply feature visibility gating
+      applyFeatureVisibility(curProfile.features);
+
+      // Recalculate strictly by current date cycles
+      const stats = calculateTotals();
+
+      document.getElementById('statTodayIncome').textContent = `${curr}${stats.today.income.toLocaleString()}`;
+      document.getElementById('statMonthIncome').textContent = `${curr}${stats.month.income.toLocaleString()}`;
+      document.getElementById('statYearIncome').textContent = `${curr}${stats.year.income.toLocaleString()}`;
+
+      document.getElementById('statTodayExpense').textContent = `${curr}${stats.today.expense.toLocaleString()}`;
+      document.getElementById('statMonthExpense').textContent = `${curr}${stats.month.expense.toLocaleString()}`;
+      document.getElementById('statYearExpense').textContent = `${curr}${stats.year.expense.toLocaleString()}`;
+
+      document.getElementById('statTodaySavings').textContent = `${curr}${stats.today.savings.toLocaleString()}`;
+      document.getElementById('statMonthSavings').textContent = `${curr}${stats.month.savings.toLocaleString()}`;
+      document.getElementById('statYearSavings').textContent = `${curr}${stats.year.savings.toLocaleString()}`;
+
+      const todayNet = stats.today.income - stats.today.expense - stats.today.savings;
+      const monthNet = stats.month.income - stats.month.expense - stats.month.savings;
+      const yearNet = stats.year.income - stats.year.expense - stats.year.savings;
+
+      const formatNet = (val, elId) => {
+        const el = document.getElementById(elId);
+        el.textContent = `${curr}${val.toLocaleString()}`;
+        el.className = `py-3 text-right font-bold font-mono ${val >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      };
+
+      formatNet(todayNet, 'statTodayNet');
+      formatNet(monthNet, 'statMonthNet');
+      formatNet(yearNet, 'statYearNet');
+
+      renderThresholds(stats.month.expense, stats.year.expense);
+      renderReminders();
+      renderQuickPresets();
+      renderBills();
+      renderGoals();
+      renderTransactions();
+      lucide.createIcons();
+    }
+
+    function renderQuickPresets() {
+      const container = document.getElementById('quickPresetsList');
+      const curProfile = getActiveProfile();
+      if (!curProfile.presets || curProfile.presets.length === 0) {
+        container.innerHTML = `
+          <div class="text-xs text-slate-500 py-1.5 px-2 flex items-center gap-2">
+            <span>No presets. Tap <strong>Customize</strong> to add 1-click buttons.</span>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = curProfile.presets.map((p, idx) => `
+        <button onclick="triggerPreset(${idx})" class="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/40 text-left shrink-0 transition active:scale-95 group">
+          <div class="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-xs">
+            <i data-lucide="${p.icon || 'tag'}" class="w-3.5 h-3.5"></i>
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-slate-200 group-hover:text-amber-300 transition">${p.label}</div>
+            <div class="text-[10px] text-slate-400 font-mono font-medium">
+              ${p.amount > 0 ? curProfile.currency + p.amount : '<span class="text-amber-400">Ask Amt</span>'}
+            </div>
+          </div>
+        </button>
+      `).join('');
+    }
+
+    function switchBillTab(tab) {
+      currentBillTab = tab;
+      const tabUnpaid = document.getElementById('billTabUnpaid');
+      const tabPaid = document.getElementById('billTabPaid');
+
+      if (tab === 'unpaid') {
+        tabUnpaid.className = 'pb-2 border-b-2 border-blue-500 text-blue-400';
+        tabPaid.className = 'pb-2 text-slate-400 hover:text-slate-200';
+      } else {
+        tabPaid.className = 'pb-2 border-b-2 border-blue-500 text-blue-400';
+        tabUnpaid.className = 'pb-2 text-slate-400 hover:text-slate-200';
+      }
+      renderBills();
+    }
+
+    function renderBills() {
+      const container = document.getElementById('billsList');
+      const curProfile = getActiveProfile();
+      const unpaidBills = curProfile.bills.filter(b => !b.paid);
+      document.getElementById('unpaidCount').textContent = unpaidBills.length;
+
+      const filtered = curProfile.bills.filter(b => currentBillTab === 'unpaid' ? !b.paid : b.paid);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-6 text-xs text-slate-500 border border-dashed border-slate-800 rounded-2xl">
+            No ${currentBillTab} bills. Tap <strong>+ Add Bill</strong> to register upcoming power, Wi-Fi, or recharge dues.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(bill => `
+        <div class="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs hover:border-slate-700 transition gap-2 sm:gap-3">
+          
+          <div class="flex items-center gap-3 min-w-0 flex-1">
+            <div class="w-8 h-8 rounded-xl ${bill.paid ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'} flex items-center justify-center shrink-0">
+              <i data-lucide="${bill.paid ? 'check-circle' : 'receipt'}" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="font-bold text-white truncate text-xs sm:text-sm">${bill.name}</div>
+              <div class="text-[11px] text-slate-400 mt-0.5 truncate">
+                ${bill.category} • Due: ${bill.dueDate}
+                ${bill.paid ? ` • <span class="text-emerald-400 font-medium">Paid (${bill.paidDate})</span>` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div class="w-16 sm:w-20 text-right font-mono font-bold text-white shrink-0 text-xs sm:text-sm">
+            ${(bill.paid ? bill.paidAmount : bill.amount) > 0 
+              ? curProfile.currency + (bill.paid ? bill.paidAmount : bill.amount).toLocaleString() 
+              : '<span class="text-slate-400 text-[11px] font-sans">Variable</span>'}
+          </div>
+
+          <div class="w-24 shrink-0 flex justify-center">
+            ${!bill.paid ? `
+              <button onclick="openMarkPaidModal('${bill.id}')" class="w-full h-8 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] sm:text-xs shadow-md shadow-emerald-600/20 transition active:scale-95 inline-flex items-center justify-center gap-1 whitespace-nowrap">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                <span>Mark Paid</span>
+              </button>
+            ` : `
+              <button onclick="markBillUnpaid('${bill.id}')" class="w-full h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-[11px] transition inline-flex items-center justify-center whitespace-nowrap">
+                Undo
+              </button>
+            `}
+          </div>
+
+          <div class="w-8 shrink-0 flex justify-end">
+            <button onclick="deleteBill('${bill.id}')" title="Delete Bill" class="w-8 h-8 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 flex items-center justify-center transition">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function renderGoals() {
+      const container = document.getElementById('goalsList');
+      const curProfile = getActiveProfile();
+      if (curProfile.goals.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-6 text-xs text-slate-500 border border-dashed border-slate-800 rounded-2xl">
+            No active savings or investment goals set. Tap <strong>+ Add Goal</strong> to start planning SIPs, gold, or vacation funds.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = curProfile.goals.map(goal => {
+        const pct = Math.min((goal.current / goal.target) * 100, 100).toFixed(0);
+        return `
+          <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-start mb-1.5">
+                <span class="font-bold text-xs text-white">${goal.name}</span>
+                <button onclick="deleteGoal('${goal.id}')" title="Delete Goal" class="w-6 h-6 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 flex items-center justify-center transition">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+              <div class="flex justify-between text-xs text-slate-400 font-mono mb-2">
+                <span>${curProfile.currency}${goal.current.toLocaleString()}</span>
+                <span>${curProfile.currency}${goal.target.toLocaleString()} (${pct}%)</span>
+              </div>
+              <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-3">
+                <div class="h-full bg-violet-500 rounded-full" style="width: ${pct}%"></div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-800/80 text-[11px]">
+              <span class="text-slate-400">Reminder: <strong class="text-slate-300">${goal.reminderDate || 'None'}</strong></span>
+              <button onclick="openDepositModal('${goal.id}')" class="px-2.5 py-1 rounded-lg bg-violet-600/20 text-violet-400 hover:bg-violet-600 hover:text-white font-semibold transition">
+                + Deposit
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function filterTransactions(type) {
+      activeFilter = type;
+      ['all', 'income', 'expense', 'savings'].forEach(t => {
+        const btn = document.getElementById('txFilter' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (t === type) {
+          btn.className = 'px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-medium';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-slate-200 font-medium';
+        }
+      });
+      renderTransactions();
+    }
+
+    function renderTransactions() {
+      const container = document.getElementById('transactionHistory');
+      const curProfile = getActiveProfile();
+      let filtered = curProfile.transactions;
+      if (activeFilter !== 'all') {
+        filtered = filtered.filter(t => t.type === activeFilter);
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8 text-xs text-slate-500 border border-dashed border-slate-800 rounded-2xl">
+            No entries found. Log an income or daily expense above.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(tx => {
+        let iconName = 'arrow-up-right';
+        let colorClass = 'text-rose-400 bg-rose-500/10';
+        let sign = '-';
+
+        if (tx.type === 'income') {
+          iconName = 'arrow-down-left';
+          colorClass = 'text-emerald-400 bg-emerald-500/10';
+          sign = '+';
+        } else if (tx.type === 'savings') {
+          iconName = 'gem';
+          colorClass = 'text-violet-400 bg-violet-500/10';
+          sign = '💎 ';
+        }
+
+        return `
+          <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-900 border border-slate-800/80 hover:border-slate-700 transition text-xs">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-xl ${colorClass} flex items-center justify-center shrink-0">
+                <i data-lucide="${iconName}" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="font-bold text-white">${tx.desc}</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">${tx.category} • ${tx.date}</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <span class="font-mono font-bold text-sm ${tx.type === 'income' ? 'text-emerald-400' : (tx.type === 'savings' ? 'text-violet-400' : 'text-rose-400')}">
+                ${sign}${curProfile.currency}${tx.amount.toLocaleString()}
+              </span>
+              <button onclick="deleteTransaction('${tx.id}')" title="Delete Entry" class="w-7 h-7 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 flex items-center justify-center transition">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    // Bidirectional Synchronized Transaction Deletion
+    function deleteTransaction(id) {
+      const curProfile = getActiveProfile();
+      const tx = curProfile.transactions.find(t => t.id === id);
+      if (!tx) return;
+
+      requestConfirmation({
+        title: 'Delete Transaction?',
+        message: `Permanently delete "${tx.desc}" (${curProfile.currency}${tx.amount.toLocaleString()})? ${
+          tx.type === 'savings' && tx.goalRef ? 'The transferred amount will also be deducted from the respective goal in your vault.' : ''
+        }`,
+        btnText: 'Delete Entry',
+        onConfirm: () => {
+          if (tx.type === 'savings' && tx.goalRef) {
+            const goal = curProfile.goals.find(g => g.id === tx.goalRef);
+            if (goal) {
+              goal.current = Math.max(0, (goal.current || 0) - tx.amount);
+            }
+          }
+
+          if (tx.billRef) {
+            const bill = curProfile.bills.find(b => b.id === tx.billRef);
+            if (bill) {
+              bill.paid = false;
+            }
+          }
+
+          curProfile.transactions = curProfile.transactions.filter(t => t.id !== id);
+          saveMasterToStorage();
+          renderAll();
+        }
+      });
+    }
+
+    // ==========================================
+    // JSON EXPORT & SMART MERGE DEDUPLICATION
+    // ==========================================
+    function exportToJSON() {
+      const curProfile = getActiveProfile();
+      const exportPayload = {
+        app: "EasyTrack Pro",
+        version: "4.0",
+        exportDate: new Date().toISOString(),
+        profile: curProfile
+      };
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `EasyTrack_${curProfile.name}_Backup_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importAndMergeJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          const dataToMerge = imported.profile || imported;
+
+          if (!dataToMerge || typeof dataToMerge !== 'object') {
+            alert("Invalid JSON format.");
+            document.getElementById('importInput').value = '';
+            return;
+          }
+
+          const curProfile = getActiveProfile();
+          let addedTx = 0, skippedTx = 0;
+          let addedBills = 0, skippedBills = 0;
+          let addedGoals = 0, skippedGoals = 0;
+
+          if (Array.isArray(dataToMerge.transactions)) {
+            dataToMerge.transactions.forEach(impTx => {
+              const isDuplicate = curProfile.transactions.some(curTx => 
+                (curTx.id && impTx.id && curTx.id === impTx.id) ||
+                (curTx.type === impTx.type &&
+                 curTx.amount === impTx.amount &&
+                 curTx.desc === impTx.desc &&
+                 curTx.date === impTx.date)
+              );
+
+              if (!isDuplicate) {
+                curProfile.transactions.push(impTx);
+                addedTx++;
+              } else {
+                skippedTx++;
+              }
+            });
+            curProfile.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+          }
+
+          if (Array.isArray(dataToMerge.bills)) {
+            dataToMerge.bills.forEach(impBill => {
+              const isDuplicate = curProfile.bills.some(curBill =>
+                (curBill.id && impBill.id && curBill.id === impBill.id) ||
+                (curBill.name.toLowerCase() === impBill.name.toLowerCase() &&
+                 curBill.category === impBill.category &&
+                 curBill.dueDate === impBill.dueDate)
+              );
+
+              if (!isDuplicate) {
+                curProfile.bills.push(impBill);
+                addedBills++;
+              } else {
+                skippedBills++;
+              }
+            });
+          }
+
+          if (Array.isArray(dataToMerge.goals)) {
+            dataToMerge.goals.forEach(impGoal => {
+              const isDuplicate = curProfile.goals.some(curGoal =>
+                (curGoal.id && impGoal.id && curGoal.id === impGoal.id) ||
+                (curGoal.name.toLowerCase() === impGoal.name.toLowerCase())
+              );
+
+              if (!isDuplicate) {
+                curProfile.goals.push(impGoal);
+                addedGoals++;
+              } else {
+                skippedGoals++;
+              }
+            });
+          }
+
+          if (Array.isArray(dataToMerge.presets)) {
+            dataToMerge.presets.forEach(impP => {
+              const exists = curProfile.presets.some(p => p.label.toLowerCase() === impP.label.toLowerCase());
+              if (!exists) curProfile.presets.push(impP);
+            });
+          }
+
+          saveMasterToStorage();
+          renderAll();
+          document.getElementById('importInput').value = '';
+
+          alert(
+            `Merge Complete for "${curProfile.name}"!\n` +
+            `• Transactions: +${addedTx} added (${skippedTx} duplicate skipped)\n` +
+            `• Utility Bills: +${addedBills} added (${skippedBills} duplicate skipped)\n` +
+            `• Vault Goals: +${addedGoals} added (${skippedGoals} duplicate skipped)`
+          );
+
+        } catch (err) {
+          alert("Error parsing JSON file. Please verify file integrity.");
+          document.getElementById('importInput').value = '';
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ==========================================
+    // PDF TIMELINE EXPORT ENGINE (ASCII CLEAN)
+    // ==========================================
+    function openPDFTimelineModal() {
+      setPDFQuickRange('month');
+      openModal('pdfTimelineModal');
+    }
+
+    function setPDFQuickRange(rangeType) {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const curYear = now.getFullYear();
+      const curMonth = now.getMonth();
+
+      let start = '', end = '';
+
+      if (rangeType === 'month') {
+        start = `${curYear}-${pad(curMonth + 1)}-01`;
+        const lastDay = new Date(curYear, curMonth + 1, 0).getDate();
+        end = `${curYear}-${pad(curMonth + 1)}-${pad(lastDay)}`;
+      } else if (rangeType === 'lastMonth') {
+        const lastM = curMonth === 0 ? 11 : curMonth - 1;
+        const lastMY = curMonth === 0 ? curYear - 1 : curYear;
+        start = `${lastMY}-${pad(lastM + 1)}-01`;
+        const lastDay = new Date(lastMY, lastM + 1, 0).getDate();
+        end = `${lastMY}-${pad(lastM + 1)}-${pad(lastDay)}`;
+      } else if (rangeType === 'year') {
+        start = `${curYear}-01-01`;
+        end = `${curYear}-12-31`;
+      } else if (rangeType === 'all') {
+        start = '2020-01-01';
+        end = new Date(curYear + 1, 11, 31).toISOString().split('T')[0];
+      }
+
+      document.getElementById('pdfStartDate').value = start;
+      document.getElementById('pdfEndDate').value = end;
+      updatePDFCountPreview();
+    }
+
+    function updatePDFCountPreview() {
+      const start = document.getElementById('pdfStartDate').value;
+      const end = document.getElementById('pdfEndDate').value;
+      const curProfile = getActiveProfile();
+      
+      const count = curProfile.transactions.filter(tx => {
+        if (!tx.date) return false;
+        return (!start || tx.date >= start) && (!end || tx.date <= end);
+      }).length;
+
+      document.getElementById('pdfPreviewCount').textContent = `${count} entries found`;
+    }
+
+    function generateFilteredPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const curProfile = getActiveProfile();
+
+      // Clean ASCII string to avoid font glyph bugs
+      const currSymbol = curProfile.currency === '₹' ? 'Rs. ' : (curProfile.currency + ' ');
+      const dateStr = new Date().toISOString().split('T')[0];
+
+      const startDate = document.getElementById('pdfStartDate').value;
+      const endDate = document.getElementById('pdfEndDate').value;
+
+      const filtered = curProfile.transactions.filter(tx => {
+        if (!tx.date) return false;
+        return (!startDate || tx.date >= startDate) && (!endDate || tx.date <= endDate);
+      });
+
+      let sumCredit = 0;
+      let sumDebit = 0;
+      let sumSavings = 0;
+
+      filtered.forEach(tx => {
+        if (tx.type === 'income') sumCredit += tx.amount;
+        else if (tx.type === 'expense') sumDebit += tx.amount;
+        else if (tx.type === 'savings') sumSavings += tx.amount;
+      });
+
+      const netInHand = sumCredit - sumDebit - sumSavings;
+
+      // Header Banner
+      doc.setFillColor(15, 23, 42);
+      doc.rect(0, 0, 210, 24, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(255, 255, 255);
+      doc.text(`EasyTrack Pro - ${curProfile.name}`, 14, 12);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(148, 163, 184);
+      doc.text("Personal Financial Ledger & Timeline Statement", 14, 18);
+
+      doc.setFontSize(8);
+      doc.setTextColor(203, 213, 225);
+      doc.text(`Timeline: ${startDate || 'Start'} to ${endDate || 'Present'}`, 196, 12, { align: 'right' });
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 196, 18, { align: 'right' });
+
+      // KPI Metric Cards Grid
+      const kpis = [
+        { label: 'Total Inflow', val: `${currSymbol}${sumCredit.toLocaleString()}`, color: [16, 185, 129] },
+        { label: 'Total Outflow', val: `${currSymbol}${sumDebit.toLocaleString()}`, color: [244, 63, 94] },
+        { label: 'Savings Transfers', val: `${currSymbol}${sumSavings.toLocaleString()}`, color: [139, 92, 246] },
+        { label: 'Net Cash Balance', val: `${currSymbol}${netInHand.toLocaleString()}`, color: [59, 130, 246] }
+      ];
+
+      const startY = 30;
+      const cardW = 43;
+      const cardH = 17;
+      const gap = 3;
+
+      kpis.forEach((kpi, idx) => {
+        const x = 14 + idx * (cardW + gap);
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(x, startY, cardW, cardH, 2, 2, 'FD');
+
+        doc.setFillColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+        doc.roundedRect(x, startY, cardW, 1.2, 0.5, 0.5, 'F');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text(kpi.label.toUpperCase(), x + 3, startY + 6);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(15, 23, 42);
+        doc.text(kpi.val, x + 3, startY + 12.5);
+      });
+
+      // Prepare Structured Table Rows
+      const rows = filtered.map((tx) => {
+        const isInflow = tx.type === 'income';
+        const isSavings = tx.type === 'savings';
+        const isExpense = tx.type === 'expense';
+
+        const creditVal = isInflow ? `${currSymbol}${tx.amount.toLocaleString()}` : '-';
+        const debitVal = isExpense ? `${currSymbol}${tx.amount.toLocaleString()}` : '-';
+        const savingsVal = isSavings ? `${currSymbol}${tx.amount.toLocaleString()}` : '-';
+
+        let badgeType = 'Expense';
+        if (isInflow) badgeType = 'Income';
+        if (isSavings) badgeType = 'Savings Transfer';
+
+        return [
+          tx.date,
+          `${badgeType}\n${tx.category || 'General'}`,
+          tx.desc || 'Transaction',
+          creditVal,
+          debitVal,
+          savingsVal
+        ];
+      });
+
+      const footerRow = [
+        'Total Sum',
+        '',
+        `${filtered.length} entries in range`,
+        `${currSymbol}${sumCredit.toLocaleString()}`,
+        `${currSymbol}${sumDebit.toLocaleString()}`,
+        `${currSymbol}${sumSavings.toLocaleString()}`
+      ];
+
+      doc.autoTable({
+        startY: 53,
+        head: [['Date', 'Classification', 'Description / Details', 'Credit (+)', 'Debit (-)', 'Savings (Vault)']],
+        body: rows.length > 0 ? rows : [['-', '-', 'No transactions logged in this timeline', '-', '-', '-']],
+        foot: rows.length > 0 ? [footerRow] : undefined,
+        theme: 'grid',
+        tableLineColor: [226, 232, 240],
+        tableLineWidth: 0.2,
+        headStyles: {
+          fillColor: [30, 41, 59],
+          textColor: [255, 255, 255],
+          fontSize: 7.5,
+          fontStyle: 'bold',
+          halign: 'left',
+          valign: 'middle',
+          cellPadding: 3
+        },
+        footStyles: {
+          fillColor: [241, 245, 249],
+          textColor: [15, 23, 42],
+          fontSize: 8,
+          fontStyle: 'bold',
+          halign: 'left',
+          valign: 'middle',
+          cellPadding: 3
+        },
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+          textColor: [51, 65, 85],
+          lineColor: [226, 232, 240],
+          lineWidth: 0.15,
+          valign: 'middle'
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252]
+        },
+        columnStyles: {
+          0: { cellWidth: 22, halign: 'center' },
+          1: { cellWidth: 32, fontStyle: 'bold' },
+          2: { cellWidth: 'auto' },
+          3: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: [16, 185, 129] },
+          4: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: [225, 29, 72] },
+          5: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: [139, 92, 246] }
+        },
+        didDrawPage: function(data) {
+          const pageCount = doc.internal.getNumberOfPages();
+          doc.setFontSize(7.5);
+          doc.setTextColor(148, 163, 184);
+          doc.text(`EasyTrack Pro • Profile: ${curProfile.name} • Timeline Statement`, 14, 290);
+          doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber} of ${pageCount}`, 196, 290, { align: 'right' });
+        }
+      });
+
+      doc.save(`EasyTrack_${curProfile.name}_Statement_${dateStr}.pdf`);
+      closeAllModals();
+    }
+  </script>
+</body>
+</html>
